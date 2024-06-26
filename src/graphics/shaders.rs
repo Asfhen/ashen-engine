@@ -12,7 +12,7 @@ use glm::{Matrix4, Vec3};
 use crate::logger;
 
 pub struct Shader {
-    id: u32,
+    pub id: u32,
 
     fragment_shader: u32,
     geometry_shader: u32,
@@ -42,7 +42,7 @@ impl Shader {
                 logger::error!("{}", e);
                 panic!("Failed to open {}", source);
             });
-        
+
         let mut shader_code = String::new();
         shader_file
             .read_to_string(&mut shader_code)
