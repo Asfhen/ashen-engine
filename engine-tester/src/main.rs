@@ -11,13 +11,13 @@ use gl::types::{GLfloat, GLsizei};
 fn main() {
     logger::init();
 
-    let mut window: Window = Window::new(1080, 720, "test");
+    let mut window: Window = Window::new(800, 600, "test");
     let vertices: [f32; 32] = [
         // positions       // colors        // texture coords
-         0.5,  0.5, 0.0,   1.0, 0.0, 0.0,   1.0, 1.0, // top right
-         0.5, -0.5, 0.0,   0.0, 1.0, 0.0,   1.0, 0.0, // bottom right
+         0.5,  0.5, 0.0,   1.0, 0.0, 0.0,   2.0, 2.0, // top right
+         0.5, -0.5, 0.0,   0.0, 1.0, 0.0,   2.0, 0.0, // bottom right
         -0.5, -0.5, 0.0,   0.0, 0.0, 1.0,   0.0, 0.0, // bottom left
-        -0.5,  0.5, 0.0,   1.0, 1.0, 0.0,   0.0, 1.0  // top left
+        -0.5,  0.5, 0.0,   1.0, 1.0, 0.0,   0.0, 2.0  // top left
     ];
     let indices = [
         0, 1, 3,  // first Triangle
@@ -27,8 +27,8 @@ fn main() {
     window.init_gl();
 
     let mut shader = Shader::new();
-    shader.load_fragment_shader("engine-tester/src/assets/shader.fs");
-    shader.load_vertex_shader("engine-tester/src/assets/shader.vs");
+    shader.load_fragment_shader("src/assets/shader.fs");
+    shader.load_vertex_shader("src/assets/shader.vs");
     shader.link_program();
 
     let vao: Vao = Vao::new();
@@ -78,19 +78,40 @@ fn main() {
     tex_cords_attrib.enable();
 
     let texture: Texture = Texture::new(
-        "engine-tester/src/assets/wall.jpg",
+        "src/assets/wall.jpg",
         TextureType::Texture2D,
-        TextureWrapping::Repeat,
-        TextureFiltering::Linear,
-        TextureFiltering::Linear,
+        TextureWrapping::Mirror,
+        TextureFiltering::Near,
+        TextureFiltering::None,
     );
+
+    let texture_2: Texture = Texture::new(
+        "src/assets/awesomeface.png",
+        TextureType::Texture2D,
+        TextureWrapping::Mirror,
+        TextureFiltering::Near,
+        TextureFiltering::None,
+    );
+
+    let shader = unsafe {
+        shader.use_program();
+
+        texture.set_uniform("texture1", shader.id, 0);
+        texture_2.set_uniform("texture2", shader.id, 1);
+
+        shader
+    };
+
 
     while !window.should_close() {
         unsafe {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
 
+            gl::ActiveTexture(gl::TEXTURE0);
             gl::BindTexture(gl::TEXTURE_2D, texture.id);
+            gl::ActiveTexture(gl::TEXTURE1);
+            gl::BindTexture(gl::TEXTURE_2D, texture_2.id);
             
             // render the triangle
             shader.use_program();
