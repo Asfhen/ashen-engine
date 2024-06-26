@@ -1,4 +1,7 @@
-use std::os::raw::c_void;
+use std::{os::raw::c_void, path::Path};
+
+extern crate alloc;
+use alloc::ffi::CString;
 
 
 pub struct Texture {
@@ -11,12 +14,24 @@ impl Texture {
         let image = image::open(source).unwrap_or_else(|e| {
             panic!("{}", e)
         });
+        let image = image.flipv();
         let (width, height) = (image.width() as i32, image.height() as i32);
         let data = image.into_bytes();
         let wrap: i32;
         let filter: i32;
         let mipmap_filter: i32;
         let mut texture = Texture { id: 0, target: target.clone() };
+
+        let file_path = Path::new(source);
+        let format = match file_path.extension() {
+            Some(os_str) => match os_str.to_str() {
+                Some("png") => gl::RGBA,
+                Some("jpg") => gl::RGB,
+                Some(_) => gl::RGB,
+                None => panic!("File not recognized as an image"),
+            },
+            None => panic!("File not recognized as an image"),
+        };
 
         unsafe {
             match wrapping {
@@ -33,6 +48,7 @@ impl Texture {
                     match mipmap_filtering {
                         TextureFiltering::Near => mipmap_filter = gl::NEAREST_MIPMAP_NEAREST as i32,
                         TextureFiltering::Linear => mipmap_filter = gl::NEAREST_MIPMAP_LINEAR as i32,
+                        TextureFiltering::None => mipmap_filter = gl::NEAREST as i32,
                     }
                 },
                 TextureFiltering::Linear => {
@@ -41,8 +57,10 @@ impl Texture {
                     match mipmap_filtering {
                         TextureFiltering::Near => mipmap_filter = gl::LINEAR_MIPMAP_NEAREST as i32,
                         TextureFiltering::Linear => mipmap_filter = gl::LINEAR_MIPMAP_LINEAR as i32,
+                        TextureFiltering::None => mipmap_filter = gl::LINEAR as i32,
                     }
                 },
+                TextureFiltering::None => panic!("It's obligatory to define a filter for images"),
             }
 
             gl::GenTextures(1, &mut texture.id);
@@ -63,7 +81,7 @@ impl Texture {
                         width,
                         height,
                         0,
-                        gl::RGB,
+                        format,
                         gl::UNSIGNED_BYTE,
                         &data[0] as *const u8 as *const c_void,
                     );
@@ -93,6 +111,13 @@ impl Texture {
             TextureType::Texture3D => gl::BindTexture(gl::TEXTURE_3D, self.id),
         }
     }
+
+    pub fn set_uniform(&self, target: &str, shader: u32, value: i32) {
+        let c_str = CString::new(target).expect("Failed to create c_string");
+        unsafe {
+            gl::Uniform1i(gl::GetUniformLocation(shader, c_str.as_ptr()), value);
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -111,4 +136,5 @@ pub enum TextureWrapping {
 pub enum TextureFiltering {
     Near,
     Linear,
+    None,
 }
