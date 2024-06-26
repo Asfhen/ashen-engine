@@ -5,7 +5,7 @@ use glfw::{Context, Glfw, Key};
 pub struct Window {
     glfw: glfw::Glfw,
     window_handle: glfw::Window,
-    events: Receiver<(f64, glfw::WindowEvent)>
+    events: Receiver<(f64, glfw::WindowEvent)>,
 }
 
 impl Window {
